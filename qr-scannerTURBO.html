@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>QRコードスキャン</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    #reader {
+      width: 300px;
+      margin: auto;
+    }
+    #result {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>QRコードスキャン</h1>
+  <div id="reader"></div>
+  <div id="result">スキャン結果がここに表示されます</div>
+
+  <script>
+    const resultEl = document.getElementById('result');
+    const html5QrCode = new Html5Qrcode("reader");
+
+    function startScanner() {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+          html5QrCode.stop();
+          resultEl.textContent = "読み取り成功: " + qrCodeMessage;
+
+          const codeParts = qrCodeMessage.trim().split(" ");
+          if (codeParts.length !== 5) {
+            resultEl.textContent = "QRコードの形式が正しくありません。";
+            setTimeout(() => startScanner(), 2000);
+            return;
+          }
+
+          const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
+          const formData = new FormData();
+          formData.append("entry.372108176", codeParts[0]); // 科目コード
+          formData.append("entry.1926098411", codeParts[1]); // レポート回数
+          formData.append("entry.1678391181", codeParts[2]); // フラグ
+          formData.append("entry.1988792708", codeParts[3]); // 学籍番号
+          formData.append("entry.1373993560", codeParts[4]); // 固定値
+
+          fetch(formUrl, {
+            method: "POST",
+            mode: "no-cors",
+            body: formData
+          }).then(() => {
+            resultEl.textContent = "送信しました！再スキャンします...";
+            setTimeout(() => startScanner(), 2000);
+          }).catch(error => {
+            console.error("送信エラー:", error);
+            resultEl.textContent = "送信エラー";
+            setTimeout(() => startScanner(), 3000);
+          });
+        },
+        errorMessage => {
+          console.warn(`読み取りエラー: ${errorMessage}`);
+        }
+      );
+    }
+
+    startScanner();
+  </script>
+</body>
+</html>
