@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>QRコードスキャン</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    #reader {
+      width: 300px;
+      margin: auto;
+    }
+    #result {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #buttons {
+      margin-top: 15px;
+      display: none;
+    }
+    button {
+      margin: 0 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>QRコードスキャン</h1>
+  <div id="reader"></div>
+  <div id="result">スキャン結果がここに表示されます</div>
+  <div id="buttons">
+    <button id="send">送信</button>
+    <button id="cancel">キャンセル</button>
+  </div>
+
+  <script>
+    const resultEl = document.getElementById('result');
+    const sendBtn = document.getElementById('send');
+    const cancelBtn = document.getElementById('cancel');
+    const buttons = document.getElementById('buttons');
+    const html5QrCode = new Html5Qrcode("reader");
+    let codeParts = [];
+
+    function startScanner() {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+          html5QrCode.stop();
+          resultEl.textContent = "読み取り成功: " + qrCodeMessage;
+          codeParts = qrCodeMessage.trim().split(" ");
+          buttons.style.display = "block";
+        },
+        errorMessage => {
+          console.warn(`読み取りエラー: ${errorMessage}`);
+        }
+      );
+    }
+
+    sendBtn.addEventListener('click', () => {
+      const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
+      const formData = new FormData();
+      formData.append("entry.372108176", codeParts[0]); // 科目コード
+      formData.append("entry.1926098411", codeParts[1]); // レポート回数
+      formData.append("entry.1678391181", codeParts[2]); // フラグ
+      formData.append("entry.1988792708", codeParts[3]); // 学籍番号
+      formData.append("entry.1373993560", codeParts[4]); // 固定値
+
+      fetch(formUrl, {
+        method: "POST",
+        mode: "no-cors",
+        body: formData
+      }).then(() => {
+        resultEl.textContent = "送信しました！";
+        buttons.style.display = "none";
+        setTimeout(() => startScanner(), 2000);
+      }).catch(error => {
+        console.error("送信エラー:", error);
+        resultEl.textContent = "送信エラー";
+      });
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      buttons.style.display = "none";
+      resultEl.textContent = "キャンセルしました。再スキャンします。";
+      setTimeout(() => startScanner(), 2000);
+    });
+
+    startScanner();
+  </script>
+</body>
+</html>
