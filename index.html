@@ -14,7 +14,8 @@
       margin-bottom: 20px;
     }
     #reader {
-      width: 300px;
+      width: 100%;
+      max-width: 400px;
       margin: auto;
     }
     #result {
@@ -32,10 +33,20 @@
     const resultEl = document.getElementById('result');
     const html5QrCode = new Html5Qrcode("reader");
 
+    // 画面サイズに応じたQRスキャン枠サイズ
+    const getQrBoxSize = () => {
+      const minEdge = Math.min(window.innerWidth, window.innerHeight);
+      return Math.floor(minEdge * 0.8); // 80% のサイズ
+    };
+
     function startScanner() {
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        {
+          fps: 15,                 // 高速化：フレームレート上げる
+          qrbox: getQrBoxSize(),  // 動的にサイズを調整
+          aspectRatio: 1.777      // 16:9 の画角に近づける
+        },
         qrCodeMessage => {
           html5QrCode.stop();
           resultEl.textContent = "読み取り成功: " + qrCodeMessage;
@@ -43,7 +54,7 @@
           const codeParts = qrCodeMessage.trim().split(" ");
           if (codeParts.length !== 5) {
             resultEl.textContent = "QRコードの形式が正しくありません。";
-            setTimeout(() => startScanner(), 2000);
+            setTimeout(() => startScanner(), 1000); // 待機短縮
             return;
           }
 
@@ -61,14 +72,15 @@
             body: formData
           }).then(() => {
             resultEl.textContent = "送信しました！再スキャンします...";
-            setTimeout(() => startScanner(), 2000);
+            setTimeout(() => startScanner(), 1000); // 待機時間短縮
           }).catch(error => {
             console.error("送信エラー:", error);
             resultEl.textContent = "送信エラー";
-            setTimeout(() => startScanner(), 3000);
+            setTimeout(() => startScanner(), 2000);
           });
         },
         errorMessage => {
+          // エラーは特に処理しない（デバッグ用）
           console.warn(`読み取りエラー: ${errorMessage}`);
         }
       );
