@@ -1,143 +1,110 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <title>QRコードスキャン</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    #reader {
-      width: 300px;
-      margin: auto;
-    }
-    #cameraSelect {
-      margin: 10px auto;
-      display: none;
-    }
-    video {
-      width: 100% !important;
-      height: auto !important;
-      transform: scaleX(1);
-    }
-    #result {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <h1>QRコードスキャン</h1>
-  <select id="cameraSelect"></select>
-  <div id="reader"></div>
-  <div id="result">カメラを初期化中...</div>
+<select id="cameraSelect" style="display: none;"></select>
+<button id="applyCamera" style="display: none;">カメラ変更を適用</button>
+<div id="result">カメラを初期化中…</div>
+<div id="reader"></div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      const readerId = "reader";
-      const html5QrCode = new Html5Qrcode(readerId);
-      const resultEl = document.getElementById("result");
-      const cameraSelect = document.getElementById("cameraSelect");
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const readerId = "reader";
+    const html5QrCode = new Html5Qrcode(readerId);
+    const resultEl = document.getElementById("result");
+    const cameraSelect = document.getElementById("cameraSelect");
+    const applyBtn = document.getElementById("applyCamera");
 
-      function isFrontCamera(label) {
-        return /front|user|前面/i.test(label);
+    let cameras = [];
+    let selectedCameraId = null;
+    let isFront = false;
+
+    function isFrontCamera(label) {
+      return /front|user|前面/i.test(label);
+    }
+
+    function applyMirrorTransform(isFront) {
+      const video = document.querySelector(`#${readerId} video`);
+      if (video) {
+        video.style.transform = isFront ? "scaleX(-1)" : "scaleX(1)";
+      }
+    }
+
+    async function startScanner(cameraId, isFrontFacing) {
+      if (html5QrCode._isScanning) {
+        await html5QrCode.stop();
       }
 
-      function applyMirrorTransform(isFront) {
-        const video = document.querySelector(`#${readerId} video`);
-        if (video) {
-          video.style.transform = isFront ? "scaleX(-1)" : "scaleX(1)";
-        }
+      resultEl.textContent = "スキャン開始中...";
+
+      html5QrCode.start(
+        { deviceId: { exact: cameraId } },
+        { fps: 15, qrbox: 250, disableFlip: true },
+        qrCodeMessage => {
+          resultEl.textContent = "読み取り成功: " + qrCodeMessage;
+          sendToGoogleForm(qrCodeMessage);
+        },
+        error => console.warn("読み取りエラー:", error)
+      ).then(() => {
+        resultEl.textContent = "スキャン中です...";
+        setTimeout(() => applyMirrorTransform(isFrontFacing), 1000);
+      }).catch(err => {
+        resultEl.textContent = "スキャン開始に失敗しました。";
+        console.error(err);
+      });
+    }
+
+    function sendToGoogleForm(message) {
+      const parts = message.trim().split(" ");
+      if (parts.length < 5) {
+        resultEl.textContent = "無効なQRコードです。";
+        return;
       }
+      const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
+      const formData = new FormData();
+      formData.append("entry.372108176", parts[0]);
+      formData.append("entry.1926098411", parts[1]);
+      formData.append("entry.1678391181", parts[2]);
+      formData.append("entry.1988792708", parts[3]);
+      formData.append("entry.1373993560", parts[4]);
 
-      async function startScanner(cameraId, isFront) {
-        if (html5QrCode._isScanning) {
-          await html5QrCode.stop();
-        }
-
-        html5QrCode.start(
-          { deviceId: { exact: cameraId } },
-          {
-            fps: 15,
-            qrbox: 250,
-            disableFlip: true
-          },
-          qrMessage => {
-            resultEl.textContent = "読み取り成功: " + qrMessage;
-            sendToGoogleForm(qrMessage);
-          },
-          error => {
-            console.warn("読み取りエラー:", error);
-          }
-        ).then(() => {
-          setTimeout(() => applyMirrorTransform(isFront), 300);
-        });
-      }
-
-      function sendToGoogleForm(qrMessage) {
-        const parts = qrMessage.trim().split(" ");
-        if (parts.length < 5) {
-          resultEl.textContent = "無効なQRコード形式です";
-          return;
-        }
-
-        const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
-        const formData = new FormData();
-        formData.append("entry.372108176", parts[0]); // 科目コード
-        formData.append("entry.1926098411", parts[1]); // レポート回数
-        formData.append("entry.1678391181", parts[2]); // フラグ
-        formData.append("entry.1988792708", parts[3]); // 学籍番号
-        formData.append("entry.1373993560", parts[4]); // 固定値
-
-        fetch(formUrl, {
-          method: "POST",
-          mode: "no-cors",
-          body: formData
-        }).then(() => {
+      fetch(formUrl, { method: "POST", mode: "no-cors", body: formData })
+        .then(() => {
           resultEl.textContent = "送信しました！";
-          setTimeout(() => {
-            const selectedIdx = cameraSelect.selectedIndex;
-            const selectedCam = cameras[selectedIdx];
-            startScanner(selectedCam.id, isFrontCamera(selectedCam.label));
-          }, 2000);
+          setTimeout(() => startScanner(selectedCameraId, isFront), 2000);
+        });
+    }
+
+    try {
+      cameras = await Html5Qrcode.getCameras();
+      if (cameras.length === 0) {
+        resultEl.textContent = "カメラが見つかりません。";
+        return;
+      }
+
+      if (cameras.length > 1) {
+        cameraSelect.style.display = "inline-block";
+        applyBtn.style.display = "inline-block";
+
+        cameras.forEach((cam, index) => {
+          const option = document.createElement("option");
+          option.value = cam.id;
+          option.text = cam.label || `カメラ ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+
+        applyBtn.addEventListener("click", () => {
+          const idx = cameraSelect.selectedIndex;
+          selectedCameraId = cameras[idx].id;
+          isFront = isFrontCamera(cameras[idx].label);
+          startScanner(selectedCameraId, isFront);
         });
       }
 
-      let cameras = [];
-      try {
-        cameras = await Html5Qrcode.getCameras();
-        if (cameras.length === 0) {
-          resultEl.textContent = "カメラが見つかりません";
-          return;
-        }
+      // 最初のカメラで起動
+      selectedCameraId = cameras[0].id;
+      isFront = isFrontCamera(cameras[0].label);
+      startScanner(selectedCameraId, isFront);
 
-        if (cameras.length > 1) {
-          cameraSelect.style.display = "inline-block";
-          cameras.forEach((cam, i) => {
-            const opt = document.createElement("option");
-            opt.value = cam.id;
-            opt.text = cam.label || `カメラ ${i + 1}`;
-            cameraSelect.appendChild(opt);
-          });
-
-          cameraSelect.addEventListener("change", () => {
-            const idx = cameraSelect.selectedIndex;
-            const selectedCam = cameras[idx];
-            startScanner(selectedCam.id, isFrontCamera(selectedCam.label));
-          });
-        }
-
-        const defaultCam = cameras[0];
-        cameraSelect.selectedIndex = 0;
-        startScanner(defaultCam.id, isFrontCamera(defaultCam.label));
-      } catch (err) {
-        console.error("カメラ取得失敗:", err);
-        resultEl.textContent = "カメラの取得に失敗しました。HTTPSでアクセスしていますか？";
-      }
-    });
-  </script>
-</body>
-</html>
+    } catch (err) {
+      console.error("カメラ取得失敗:", err);
+      resultEl.textContent = "カメラの取得に失敗しました。HTTPSでアクセスしていますか？";
+    }
+  });
+</script>
