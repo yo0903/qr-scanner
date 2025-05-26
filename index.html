@@ -2,105 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>QRコードスキャン</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    #reader {
-      width: 300px;
-      margin: auto;
-    }
-    #cameraSelect, #applyCamera {
-      margin: 10px;
-      display: none;
-    }
-    video {
-      width: 100% !important;
-      height: auto !important;
-    }
-  </style>
+  <title>QRアプリメニュー</title>
 </head>
 <body>
-  <h1>QRコードスキャン</h1>
-  <div>
-    <select id="cameraSelect"></select>
-    <button id="applyCamera">カメラ変更を適用</button>
-  </div>
-  <div id="result">カメラを初期化中…</div>
-  <div id="reader"></div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      const readerId = "reader";
-      const resultEl = document.getElementById("result");
-      const cameraSelect = document.getElementById("cameraSelect");
-      const applyBtn = document.getElementById("applyCamera");
-      const html5QrCode = new Html5Qrcode(readerId);
-      let cameras = [];
-      let currentCameraId = null;
-
-      function isFrontCamera(label) {
-        return /front|user|前面/i.test(label);
-      }
-
-      function applyMirror(isFront) {
-        const video = document.querySelector(`#${readerId} video`);
-        if (video) video.style.transform = isFront ? "scaleX(-1)" : "scaleX(1)";
-      }
-
-      async function startScanner(deviceId, label) {
-        if (html5QrCode._isScanning) {
-          await html5QrCode.stop().catch(e => console.warn("stop error", e));
-        }
-
-        resultEl.textContent = "スキャン開始中...";
-        html5QrCode.start(
-          { deviceId: { exact: deviceId } },
-          { fps: 15, qrbox: 250, disableFlip: true },
-          qrMessage => {
-            resultEl.textContent = "読み取り成功: " + qrMessage;
-          },
-          error => {
-            console.warn("スキャンエラー", error);
-          }
-        ).then(() => {
-          resultEl.textContent = "スキャン中です…";
-          applyMirror(isFrontCamera(label));
-        }).catch(err => {
-          console.error("start()失敗", err);
-          resultEl.textContent = "スキャン開始に失敗しました。";
-        });
-      }
-
-      try {
-        cameras = await Html5Qrcode.getCameras();
-        if (cameras.length === 0) throw new Error("カメラが見つかりません");
-
-        if (cameras.length > 1) {
-          cameraSelect.style.display = "inline-block";
-          applyBtn.style.display = "inline-block";
-          cameras.forEach((cam, idx) => {
-            const opt = document.createElement("option");
-            opt.value = cam.id;
-            opt.textContent = cam.label || `カメラ ${idx + 1}`;
-            cameraSelect.appendChild(opt);
-          });
-
-          applyBtn.addEventListener("click", () => {
-            const idx = cameraSelect.selectedIndex;
-            const cam = cameras[idx];
-            currentCameraId = cam.id;
-            startScanner(cam.id, cam.label);
-          });
-        }
-
-        // 初期カメラで開始
-        currentCameraId = cameras[0].id;
-        startScanner(currentCameraId, cameras[0].label);
-      } catch (err) {
-        console.error("カメラ初期化失敗", err);
-        resultEl.textContent = "カメラの初期化に失敗しました。HTTPSまたはアクセス許可をご確認ください。";
-      }
-    });
-  </script>
+  <h1>QRコードアプリ メニュー</h1>
+  <ul>
+    <li><a href="scan.html">QRコードスキャン</a></li>
+    <li><a href="camera-settings.html">カメラ設定</a></li>
+  </ul>
 </body>
 </html>
