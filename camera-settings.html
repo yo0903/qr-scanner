@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>カメラ設定</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    select, label, button { font-size: 16px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h1>カメラ設定</h1>
+  <div>
+    <label for="cameraSelect">使用するカメラ:</label>
+    <select id="cameraSelect"></select>
+  </div>
+  <div>
+    <label><input type="checkbox" id="mirrorCheckbox"> 映像を反転する（前面カメラ）</label>
+  </div>
+  <button onclick="saveSettings()">設定を保存して戻る</button>
+  <button onclick="location.href='scan.html'">スキャン画面に戻る</button>
+
+  <script>
+    const cameraSelect = document.getElementById("cameraSelect");
+    const mirrorCheckbox = document.getElementById("mirrorCheckbox");
+
+    async function init() {
+      const devices = await Html5Qrcode.getCameras();
+      if (devices.length === 0) {
+        alert("カメラが見つかりません。");
+        return;
+      }
+      devices.forEach(device => {
+        const option = document.createElement("option");
+        option.value = device.id;
+        option.textContent = device.label || "カメラ";
+        cameraSelect.appendChild(option);
+      });
+
+      // 既存設定の読み込み
+      const savedId = localStorage.getItem("cameraId");
+      const savedMirror = localStorage.getItem("mirror") === "true";
+      if (savedId) cameraSelect.value = savedId;
+      mirrorCheckbox.checked = savedMirror;
+    }
+
+    function saveSettings() {
+      localStorage.setItem("cameraId", cameraSelect.value);
+      localStorage.setItem("mirror", mirrorCheckbox.checked);
+      location.href = "scan.html";
+    }
+
+    init();
+  </script>
+</body>
+</html>

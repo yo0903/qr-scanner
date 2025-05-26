@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>QRコードスキャン</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { text-align: center; font-family: sans-serif; padding: 20px; }
+    #reader { width: 300px; margin: auto; }
+    #result { margin-top: 10px; font-weight: bold; }
+    video { width: 100% !important; height: auto !important; }
+    button { font-size: 16px; margin-top: 20px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h1>QRコードスキャン</h1>
+  <div id="reader"></div>
+  <div id="result">カメラ初期化中…</div>
+  <button onclick="location.href='camera-settings.html'">カメラ設定</button>
+
+  <script>
+    async function startScanner() {
+      const html5QrCode = new Html5Qrcode("reader");
+      const resultEl = document.getElementById("result");
+      const selectedDeviceId = localStorage.getItem("cameraId");
+      const mirror = localStorage.getItem("mirror") === "true";
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const targetDeviceId = selectedDeviceId || (devices[0]?.id);
+        if (!targetDeviceId) throw "カメラが選択されていません。";
+
+        await html5QrCode.start(
+          { deviceId: { exact: targetDeviceId } },
+          { fps: 15, qrbox: 250, disableFlip: true },
+          qrCodeMessage => {
+            resultEl.textContent = "読み取り成功: " + qrCodeMessage;
+            html5QrCode.stop();
+            sendToGoogleForm(qrCodeMessage.trim().split(" "));
+          },
+          error => {
+            console.warn("スキャンエラー:", error);
+          }
+        );
+
+        resultEl.textContent = "スキャン中…";
+        if (mirror) {
+          setTimeout(() => {
+            const video = document.querySelector("video");
+            if (video) video.style.transform = "scaleX(-1)";
+          }, 500);
+        }
+      } catch (err) {
+        console.error("カメラ初期化エラー:", err);
+        resultEl.textContent = "カメラの初期化に失敗しました。";
+      }
+    }
+
+    function sendToGoogleForm(parts) {
+      if (parts.length < 5) {
+        alert("QRコードの内容が不正です");
+        return;
+      }
+
+      const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
+      const formData = new FormData();
+      formData.append("entry.372108176", parts[0]); // 科目コード
+      formData.append("entry.1926098411", parts[1]); // レポート回数
+      formData.append("entry.1678391181", parts[2]); // フラグ
+      formData.append("entry.1988792708", parts[3]); // 学籍番号
+      formData.append("entry.1373993560", parts[4]); // 固定値
+
+      fetch(formUrl, {
+        method: "POST",
+        mode: "no-cors",
+        body: formData
+      }).then(() => {
+        document.getElementById("result").textContent = "送信完了！";
+        setTimeout(() => location.reload(), 2000); // 次スキャンのためリロード
+      }).catch(err => {
+        console.error("送信エラー:", err);
+        document.getElementById("result").textContent = "送信エラー";
+      });
+    }
+
+    startScanner();
+  </script>
+</body>
+</html>
