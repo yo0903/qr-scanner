@@ -62,13 +62,46 @@
         return;
       }
 
+      // 配列に格納する
+      let subjectCode; // 科目コード
+      let taskNo; // 課題回数
+      let taskPages; //課題ページ
+      let taskType; // 課題タイプ
+      let targetId; // ターゲットID
+      let curriculumCode; // 教育課程コード
+      let teacherCode = "";
+
+      // 配列の個数によって処理振り分け
+      switch (parts.length) {
+        case 5:
+          subjectCode = parts[0];
+          taskNo = parts[1];
+          taskPages = parts[2];
+          targetId = parts[3];
+          curriculumCode = parts[4];
+          taskType = "REPORT";
+          break;
+        case 9:
+          subjectCode = parts[2];
+          taskNo = parts[5];
+          taskPages = parts[6];
+          targetId = parts[1];
+          curriculumCode = parts[8];
+          taskType = parts[0];
+          break;
+        default:
+          alert("QRコードの形式が不正です");
+          return;
+      }
+      
       const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwRhzgKKSzDui_xlaHbH5SXpZ_HNPnvKaydBzX2VHBkYCsgg/formResponse";
       const formData = new FormData();
-      formData.append("entry.372108176", parts[0]); // 科目コード
-      formData.append("entry.1926098411", parts[1]); // レポート回数
-      formData.append("entry.1678391181", parts[2]); // フラグ
-      formData.append("entry.1988792708", parts[3]); // 学籍番号
-      formData.append("entry.1373993560", parts[4]); // 固定値
+      formData.append("entry.372108176", subjectCode);
+      formData.append("entry.1926098411", taskNo); //
+      formData.append("entry.1678391181", taskPages);
+      formData.append("entry.1988792708", targetId);
+      formData.append("entry.1373993560", curriculumCode);
+      formData.append("entry.998925870",taskType);
 
       fetch(formUrl, {
         method: "POST",
