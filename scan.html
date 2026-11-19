@@ -121,8 +121,23 @@
           }, 500);
         }
       } catch (err) {
-        console.error("カメラ初期化エラー:", err);
-        resultEl.textContent = "カメラの初期化に失敗しました。";
+          console.error("カメラ初期化エラー:", err);
+      
+          let message = "カメラの初期化に失敗しました。";
+      
+          if (err.name === "NotAllowedError") {
+              message = "カメラの使用が許可されていません。ブラウザの設定を確認してください。";
+          } else if (err.name === "NotFoundError") {
+              message = "カメラが見つかりません。";
+          } else if (err.name === "NotReadableError") {
+              message = "カメラが他のアプリで使用されている可能性があります。";
+          } else if (err.name === "OverconstrainedError") {
+              message = "指定されたカメラを使用できません。";
+          } else if (typeof err === "string") {
+              message = err;
+          }
+      
+          resultEl.textContent = message;
       }
     }
 
